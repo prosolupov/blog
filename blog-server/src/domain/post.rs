@@ -1,7 +1,7 @@
-use serde::{ Serialize, Deserialize };
-use chrono::{ DateTime, Utc };
+use crate::domain::user::UserId;
+use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, sqlx::Type)]
 #[sqlx(transparent)]

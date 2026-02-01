@@ -1,7 +1,7 @@
 use dotenvy::dotenv;
-use std::env;
 use sqlx::PgPool;
 use sqlx::postgres::PgPoolOptions;
+use std::env;
 
 pub async fn create_pool() -> Result<PgPool, sqlx::Error> {
     dotenv().expect(".env file not found");
@@ -11,7 +11,10 @@ pub async fn create_pool() -> Result<PgPool, sqlx::Error> {
     let db_user = env::var("DB_USER").expect("DB_USER not set");
     let db_password = env::var("DB_PASSWORD").expect("DB_PASSWORD not set");
 
-    let database_url = format!("postgres://{}:{}@{}:{}/{}",db_user,db_password,db_host,db_port,db_name);
+    let database_url = format!(
+        "postgres://{}:{}@{}:{}/{}",
+        db_user, db_password, db_host, db_port, db_name
+    );
 
     let pool = PgPoolOptions::new()
         .max_connections(20)
