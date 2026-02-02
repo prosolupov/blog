@@ -19,5 +19,5 @@ validator = { version = "0.20", features = ["derive"] }
 async-trait = "0.1.89"
 argon2 = "0.5.3"
 password-hash = "0.5"
-jsonwebtoken = "10.3.0"
+jsonwebtoken = { version = "10.3.0", features = ["rust_crypto"] }
 

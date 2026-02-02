@@ -1,5 +1,6 @@
-pub struct Claims {
-    pub sub: uuid::Uuid,
-    pub username: String,
-    pub exp: i64,
+use jsonwebtoken::errors::Error;
+use uuid::Uuid;
+
+fn create_refresh_token(sub: Uuid) -> Result<String, Error> {
+    todo!()
 }
