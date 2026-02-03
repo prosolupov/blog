@@ -4,10 +4,7 @@ use crate::domain::user::{UserAuthorization, UserRegistration};
 use actix_web::{HttpResponse, Responder, get, post, web};
 
 pub fn init_routes(cfg: &mut web::ServiceConfig) {
-    cfg.service(web::scope("/api/auth")
-        .service(create_user)
-        .service(login)
-    );
+    cfg.service(web::scope("/api/auth").service(create_user).service(login));
 }
 
 #[post("/register")]

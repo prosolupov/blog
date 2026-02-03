@@ -4,7 +4,7 @@ use uuid::Uuid;
 #[derive(Serialize, Deserialize)]
 pub struct RefreshClaims {
     pub sub: Uuid,
-    pub exp: i64,
+    pub exp: usize,
     pub jti: String,
 }
 
@@ -12,5 +12,5 @@ pub struct RefreshClaims {
 pub struct AccessClaims {
     pub sub: Uuid,
     pub username: String,
-    pub exp: i64,
+    pub exp: usize,
 }

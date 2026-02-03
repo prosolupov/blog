@@ -2,7 +2,7 @@ use crate::domain::error::BlogError;
 use crate::domain::user::{User, UserResponseAuthentication};
 use crate::domain::user::{UserLogin, UserRegistration, UserResponse, UserUpdate};
 use async_trait::async_trait;
-use sqlx::PgPool;
+use sqlx::{ PgPool, query_as };
 
 #[async_trait]
 pub trait UserRepository: Send + Sync {
@@ -23,7 +23,7 @@ pub struct PostgresUserRepo {
 #[async_trait]
 impl UserRepository for PostgresUserRepo {
     async fn create_user(&self, user: UserRegistration) -> Result<UserResponse, BlogError> {
-        let new_user = sqlx::query_as!(
+        let new_user = query_as!(
             UserResponse,
             "INSERT INTO users (username, email, password_hash) VALUES ($1, $2, $3) RETURNING username",
             user.username,
@@ -58,7 +58,7 @@ impl UserRepository for PostgresUserRepo {
         &self,
         username: String,
     ) -> Result<UserResponseAuthentication, BlogError> {
-        let user = sqlx::query_as!(
+        let user = query_as!(
             UserResponseAuthentication,
             "SELECT id, username, password_hash FROM users WHERE username = $1",
             username
