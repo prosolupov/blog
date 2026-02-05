@@ -6,21 +6,24 @@ use std::env;
 use chrono::{Duration, Utc};
 use uuid::Uuid;
 
-fn create_exp() -> String {
-    todo!()
-}
-
-fn create_refresh_token(user_id: Uuid) -> Result<String, Error> {
-    let key = env::var("REFRESH_KEY").expect("REFRESH_KEY must be set");
-
+fn create_exp(period: Duration) -> usize {
     let refresh_exp = Utc::now()
-        .checked_add_signed(Duration::days(7))
+        .checked_add_signed(period)
         .expect("valid timestamp")
         .timestamp() as usize;
 
+    refresh_exp
+
+}
+
+async fn create_refresh_token(user_id: Uuid) -> Result<String, Error> {
+    let key = env::var("REFRESH_KEY").expect("REFRESH_KEY must be set");
+
+    let expiration_time = Utc::now() + Duration::days(7);
+
     let refresh_token = RefreshClaims {
         sub: user_id,
-        exp: refresh_exp,
+        exp: create_exp(Duration::days(7)),
         jti: Uuid::new_v4().to_string(),
     };
 
@@ -33,18 +36,11 @@ fn create_refresh_token(user_id: Uuid) -> Result<String, Error> {
     token
 }
 
-fn create_access_token(user_id: Uuid, user_name: String) -> Result<String, Error> {
-    let expiration_time = Utc::now() + Duration::days(7);
-
-    let access_exp = Utc::now()
-        .checked_add_signed(Duration::minutes(15))
-        .expect("valid timestamp")
-        .timestamp() as usize;
-
+async fn create_access_token(user_id: Uuid, user_name: String) -> Result<String, Error> {
     let access_token = AccessClaims {
         sub: user_id,
         username: user_name,
-        exp: access_exp,
+        exp: create_exp(Duration::minutes(15)),
     };
 
     let key = env::var("ACCESS_KEY").expect("ACCESS_KEY must be set");
