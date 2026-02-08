@@ -20,4 +20,7 @@ async-trait = "0.1.89"
 argon2 = "0.5.3"
 password-hash = "0.5"
 jsonwebtoken = { version = "10.3.0", features = ["rust_crypto"] }
+tracing-subscriber = { version = "0.3.22", features = ["env-filter"] }
+tracing-actix-web = "0.7.21"
+actix-web-lab = "0.24.3"
 

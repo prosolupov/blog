@@ -1,16 +1,23 @@
+use actix_web_lab::__reexports::tracing::info;
+use crate::data::post_repository::PostgresPostRepo;
 use crate::domain::error::BlogError;
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
-use sqlx::{query_as, query_scalar, PgPool};
+use sqlx::{PgPool, query_scalar, query};
 use uuid::Uuid;
-use crate::data::post_repository::PostgresPostRepo;
 
 #[async_trait]
 pub trait JwtRepository: Send + Sync {
-    async fn create_token(&self, id: Uuid, user_id: Uuid, expires_at: DateTime<Utc>) -> Result<Uuid, BlogError>;
-    async fn find_by_id(&self, id: Uuid) -> Result<String, BlogError>;
+    async fn save_refresh_token(
+        &self,
+        jti: Uuid,
+        user_id: Uuid,
+        refresh_token_hash: String,
+        expires_at: DateTime<Utc>,
+    ) -> Result<Uuid, BlogError>;
+    async fn find_refresh_token(&self, jti: Uuid) -> Result<Uuid, BlogError>;
+    async fn delete_refresh_token(&self, jti: Uuid) -> Result<(), BlogError>;
 }
-
 
 #[derive(Clone)]
 pub struct PostgresUserRepo {
@@ -19,11 +26,18 @@ pub struct PostgresUserRepo {
 
 #[async_trait]
 impl JwtRepository for PostgresPostRepo {
-    async fn create_token(&self, id: Uuid, user_id: Uuid, expires_at: DateTime<Utc>) -> Result<Uuid, BlogError> {
+    async fn save_refresh_token(
+        &self,
+        jti: Uuid,
+        user_id: Uuid,
+        refresh_token_hash: String,
+        expires_at: DateTime<Utc>,
+    ) -> Result<Uuid, BlogError> {
         let new_token = query_scalar!(
-            "INSERT INTO refresh_tokens (id, user_id, expires_at) VALUES ($1, $2, $3) RETURNING id",
-            id,
+            "INSERT INTO refresh_tokens (jti, user_id, refresh_token_hash, expires_at) VALUES ($1, $2, $3, $4) RETURNING jti",
+            jti,
             user_id,
+            refresh_token_hash,
             expires_at
         )
             .fetch_one(&self.pool)
@@ -32,7 +46,17 @@ impl JwtRepository for PostgresPostRepo {
         Ok(new_token)
     }
 
-    async fn find_by_id(&self, id: Uuid) -> Result<String, BlogError> {
-        todo!()
+    async fn find_refresh_token(&self, jti: Uuid) -> Result<Uuid, BlogError> {
+        let jti_token = query_scalar!("SELECT jti FROM refresh_tokens WHERE jti=$1", jti)
+            .fetch_one(&self.pool)
+            .await?;
+        Ok(jti_token)
+    }
+
+    async fn delete_refresh_token(&self, jti: Uuid) -> Result<(), BlogError> {
+        query!("DELETE FROM refresh_tokens WHERE jti = $1", jti)
+            .execute(&self.pool)
+            .await?;
+        Ok(())
     }
 }

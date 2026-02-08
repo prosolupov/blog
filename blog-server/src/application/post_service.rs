@@ -1,11 +1,12 @@
-use crate::data::{PostRepository, UserRepository};
+use crate::data::PostRepository;
+use std::sync::Arc;
 
 pub struct PostService {
-    repo: Box<dyn PostRepository>,
+    repo: Arc<dyn PostRepository>,
 }
 
 impl PostService {
-    pub fn new(repo: Box<dyn PostRepository>) -> Self {
+    pub fn new(repo: Arc<dyn PostRepository>) -> Self {
         Self { repo }
     }
 }

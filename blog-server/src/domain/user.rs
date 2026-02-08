@@ -7,9 +7,15 @@ use validator::Validate;
 #[sqlx(transparent)]
 pub struct UserId(pub Uuid);
 
-impl From<uuid::Uuid> for UserId {
-    fn from(uuid: uuid::Uuid) -> Self {
+impl From<Uuid> for UserId {
+    fn from(uuid: Uuid) -> Self {
         Self(uuid)
+    }
+}
+
+impl UserId {
+    pub fn as_uuid(&self) -> &Uuid {
+        &self.0
     }
 }
 
@@ -46,6 +52,7 @@ pub struct UserLogin {
 
 #[derive(Serialize)]
 pub struct UserResponse {
+    pub id: UserId,
     pub username: String,
 }
 

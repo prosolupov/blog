@@ -1,8 +1,8 @@
 use crate::domain::error::BlogError;
-use crate::domain::user::{User, UserResponseAuthentication};
-use crate::domain::user::{UserLogin, UserRegistration, UserResponse, UserUpdate};
+use crate::domain::user::UserResponseAuthentication;
+use crate::domain::user::{UserRegistration, UserResponse};
 use async_trait::async_trait;
-use sqlx::{ PgPool, query_as };
+use sqlx::{PgPool, query_as};
 
 #[async_trait]
 pub trait UserRepository: Send + Sync {
@@ -25,7 +25,7 @@ impl UserRepository for PostgresUserRepo {
     async fn create_user(&self, user: UserRegistration) -> Result<UserResponse, BlogError> {
         let new_user = query_as!(
             UserResponse,
-            "INSERT INTO users (username, email, password_hash) VALUES ($1, $2, $3) RETURNING username",
+            "INSERT INTO users (username, email, password_hash) VALUES ($1, $2, $3) RETURNING id, username",
             user.username,
             user.email,
             user.password,
@@ -47,9 +47,13 @@ impl UserRepository for PostgresUserRepo {
     }
 
     async fn get_user_by_id(&self, id: uuid::Uuid) -> Result<UserResponse, BlogError> {
-        let user = sqlx::query_as!(UserResponse, "SELECT username FROM users WHERE id = $1", id)
-            .fetch_one(&self.pool)
-            .await?;
+        let user = sqlx::query_as!(
+            UserResponse,
+            "SELECT id, username FROM users WHERE id = $1",
+            id
+        )
+        .fetch_one(&self.pool)
+        .await?;
 
         Ok(user)
     }

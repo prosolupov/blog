@@ -1,10 +1,10 @@
 use crate::application::user_service::UserService;
 use crate::domain::error::BlogError;
-use crate::domain::user::{UserAuthorization, UserRegistration};
-use actix_web::{HttpResponse, Responder, get, post, web};
+use crate::domain::user::UserRegistration;
+use actix_web::{HttpResponse, Responder, post, web};
 
 pub fn init_routes(cfg: &mut web::ServiceConfig) {
-    cfg.service(web::scope("/api/auth").service(create_user).service(login));
+    cfg.service(web::scope("/api/user").service(create_user));
 }
 
 #[post("/register")]
@@ -16,20 +16,6 @@ async fn create_user(
         Ok(user) => HttpResponse::Ok().json(user),
         Err(err) => match err {
             BlogError::AlreadyExists(_) => HttpResponse::Conflict().json(format!("Error")),
-            _ => HttpResponse::InternalServerError().finish(),
-        },
-    }
-}
-
-#[post("/login")]
-async fn login(
-    user_service: web::Data<UserService>,
-    user: web::Json<UserAuthorization>,
-) -> impl Responder {
-    match user_service.login(user.into_inner()).await {
-        Ok(user) => HttpResponse::Ok().json(user),
-        Err(err) => match err {
-            BlogError::InvalidCredential => HttpResponse::BadRequest().json(format!("Error")),
             _ => HttpResponse::InternalServerError().finish(),
         },
     }
