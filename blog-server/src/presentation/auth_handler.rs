@@ -41,8 +41,3 @@ async fn refresh(auth_service: web::Data<AuthService>, refresh_token: web::Json<
         }
     }
 }
-
-// #[post("/logout")]
-// async fn logout(auth_service: web::Data<AuthService>, user: web::Json<UserAuthorization>,) -> impl Responder {
-//     todo!()
-// }

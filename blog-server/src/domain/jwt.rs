@@ -11,6 +11,7 @@ pub struct RefreshClaims {
 }
 
 #[derive(Serialize, Deserialize)]
+#[derive(Clone)]
 pub struct AccessClaims {
     pub sub: Uuid,
     pub username: String,

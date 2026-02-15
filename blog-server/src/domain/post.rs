@@ -7,6 +7,18 @@ use uuid::Uuid;
 #[sqlx(transparent)]
 pub struct PostId(pub Uuid);
 
+impl From<Uuid> for PostId {
+    fn from(uuid: Uuid) -> Self {
+        Self(uuid)
+    }
+}
+
+impl PostId {
+    pub fn as_uuid(&self) -> &Uuid {
+        &self.0
+    }
+}
+
 #[derive(Serialize)]
 pub struct Post {
     id: PostId,
@@ -19,12 +31,24 @@ pub struct Post {
 
 #[derive(Deserialize)]
 pub struct CreatePost {
-    title: String,
-    content: String,
+    pub title: String,
+    pub content: String,
+}
+#[derive(Serialize)]
+pub struct ResponsePost {
+    pub title: String,
+    pub content: String,
 }
 
 #[derive(Deserialize)]
 pub struct UpdatePost {
     title: String,
     content: String,
+}
+
+
+#[derive(Deserialize)]
+pub struct Pagination {
+    pub page: Option<u32>,
+    pub per_page: Option<u32>,
 }

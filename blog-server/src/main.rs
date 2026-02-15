@@ -11,12 +11,22 @@ use crate::application::user_service::UserService;
 use crate::data::RepositoryContainer;
 use crate::data::post_repository::PostgresPostRepo;
 use crate::data::user_repository::PostgresUserRepo;
-use actix_web::{App, HttpServer, web};
+use actix_web::{web, App, HttpServer};
 use infrastructure::database::create_pool;
 use presentation::{auth_handler, user_handler};
-use sqlx::{PgPool, migrate};
-use std::sync::Arc;
+use actix_cors::Cors;
 use crate::infrastructure::logging::init_tracing;
+use crate::pb::blog_service_server::BlogServiceServer;
+use crate::presentation::grpc_service::BlogGrpcService;
+use crate::presentation::middleware::AutMiddleware;
+use crate::presentation::post_handler;
+use sqlx::{migrate, PgPool};
+use std::sync::Arc;
+use tonic::transport::Server;
+
+pub mod pb {
+    tonic::include_proto!("blog.v1");
+}
 
 fn create_repo_container(pool: &PgPool) -> RepositoryContainer {
     let user_repo_pg = Arc::new(PostgresUserRepo { pool: pool.clone() });
@@ -38,9 +48,62 @@ async fn run_migrations(pool: &PgPool) -> Result<(), sqlx::Error> {
     Ok(())
 }
 
+
+async fn run_grpc_server(
+    user: Arc<UserService>,
+    post: Arc<PostService>,
+    auth: Arc<AuthService>,
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let addr = "127.0.0.1:50051".parse()?;
+    let svc = BlogGrpcService::new(auth, user, post);
+
+    Server::builder()
+        .add_service(BlogServiceServer::new(svc))
+        .serve(addr)
+        .await?;
+
+    Ok(())
+}
+
+async fn run_http_server(
+    user: Arc<UserService>,
+    post: Arc<PostService>,
+    auth: Arc<AuthService>,
+) -> std::io::Result<()> {
+    let user_data = web::Data::from(user);
+    let post_data = web::Data::from(post);
+    let auth_data = web::Data::from(auth);
+
+    HttpServer::new(move || {
+        App::new()
+            .wrap(
+                Cors::default()
+                    .allowed_methods(vec!["GET", "POST", "PUT", "DELETE"])
+                    .allow_any_header()
+                    .max_age(3600),
+            )
+            .wrap(tracing_actix_web::TracingLogger::default())
+            .app_data(user_data.clone())
+            .app_data(post_data.clone())
+            .app_data(auth_data.clone())
+            .configure(user_handler::init_routes)
+            .configure(auth_handler::init_routes)
+            .service(
+                web::scope("/api")
+                    .wrap(AutMiddleware)
+                    .configure(post_handler::init_routes),
+            )
+    })
+    .bind("127.0.0.1:8080")?
+    .run()
+    .await
+}
+
+
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     init_tracing();
+
 
     let pool = create_pool().await.expect("Failed to create pool");
     let repo_container = create_repo_container(&pool);
@@ -49,27 +112,23 @@ async fn main() -> std::io::Result<()> {
         repo_container.user.clone(),
     ));
 
-    let user_service = web::Data::new(UserService::new(repo_container.user.clone()));
-    let post_service = web::Data::new(PostService::new(repo_container.post));
-    let auth_service = web::Data::new(AuthService::new(
-        repo_container.user.clone(),
-        jwt_service.clone(),
-    ));
-
     run_migrations(&pool)
         .await
         .expect("Failed to run migrations");
 
-    HttpServer::new(move || {
-        App::new()
-            .wrap(tracing_actix_web::TracingLogger::default())
-            .app_data(user_service.clone())
-            .app_data(post_service.clone())
-            .app_data(auth_service.clone())
-            .configure(user_handler::init_routes)
-            .configure(auth_handler::init_routes)
-    })
-    .bind("127.0.0.1:8080")?
-    .run()
-    .await
+    let user_service = Arc::new(UserService::new(repo_container.user.clone()));
+    let post_service = Arc::new(PostService::new(repo_container.post.clone()));
+    let auth_service = Arc::new(AuthService::new(repo_container.user.clone(), jwt_service.clone()));
+
+    let grpc_user = user_service.clone();
+    let grpc_post = post_service.clone();
+    let grpc_auth = auth_service.clone();
+
+    tokio::spawn(async move {
+        if let Err(e) = run_grpc_server(grpc_user, grpc_post, grpc_auth).await {
+            eprintln!("gRPC server error: {e}");
+        }
+    });
+
+    run_http_server(user_service, post_service, auth_service).await
 }
