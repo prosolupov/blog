@@ -78,6 +78,7 @@ async fn run_http_server(
         App::new()
             .wrap(
                 Cors::default()
+                    .allow_any_origin()
                     .allowed_methods(vec!["GET", "POST", "PUT", "DELETE"])
                     .allow_any_header()
                     .max_age(3600),

@@ -42,6 +42,14 @@ where
     forward_ready!(service);
 
     fn call(&self, req: ServiceRequest) -> Self::Future {
+        if req.method() == actix_web::http::Method::GET && req.path() == "/api/posts" {
+            let fut = self.service.call(req);
+            return Box::pin(async move {
+                let res = fut.await?;
+                Ok(res)
+            });
+        }
+
         let auth_token = req.headers()
             .get("Authorization")
             .and_then(|header| header.to_str().ok())
@@ -75,4 +83,3 @@ where
         }
     }
 }
-

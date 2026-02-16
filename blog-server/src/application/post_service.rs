@@ -1,7 +1,7 @@
 use crate::data::PostRepository;
 use std::sync::Arc;
 use crate::domain::error::BlogError;
-use crate::domain::post::{CreatePost, Post, PostId, ResponsePost, UpdatePost};
+use crate::domain::post::{CreatePost, PostId, ResponsePost};
 use crate::domain::user::UserId;
 
 pub struct PostService {

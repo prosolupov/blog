@@ -4,7 +4,7 @@ use uuid::Uuid;
 use crate::application::post_service::PostService;
 use crate::domain::error::BlogError;
 use crate::domain::jwt::AccessClaims;
-use crate::domain::post::{CreatePost, Pagination, PostId, ResponsePost};
+use crate::domain::post::{CreatePost, Pagination, PostId};
 use crate::domain::user::UserId;
 
 pub fn init_routes(cfg: &mut web::ServiceConfig) {

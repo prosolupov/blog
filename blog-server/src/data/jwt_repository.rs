@@ -1,4 +1,3 @@
-use actix_web_lab::__reexports::tracing::info;
 use crate::data::post_repository::PostgresPostRepo;
 use crate::domain::error::BlogError;
 use async_trait::async_trait;

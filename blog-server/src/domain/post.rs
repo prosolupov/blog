@@ -36,8 +36,10 @@ pub struct CreatePost {
 }
 #[derive(Serialize)]
 pub struct ResponsePost {
+    pub id: PostId,
     pub title: String,
     pub content: String,
+    pub author_id: UserId,
 }
 
 #[derive(Deserialize)]

@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Blog WASM</title>
+    <style>
+      body { font-family: Arial, sans-serif; margin: 24px; }
+      section { margin-bottom: 24px; padding: 12px; border: 1px solid #ddd; border-radius: 8px; }
+      label { display: block; margin: 6px 0 2px; }
+      input, textarea { width: 100%; padding: 6px; }
+      button { margin-top: 8px; }
+      .post { padding: 8px; border-bottom: 1px solid #eee; }
+      .row { display: flex; gap: 8px; }
+      .row > div { flex: 1; }
+      .muted { color: #666; font-size: 12px; }
+    </style>
+  </head>
+  <body>
+    <h1>Blog WASM</h1>
+
+
+    <section>
+      <h2>Регистрация</h2>
+      <form id="register-form">
+        <label>Username</label>
+        <input id="reg-username" required />
+        <label>Email</label>
+        <input id="reg-email" type="email" required />
+        <label>Password</label>
+        <input id="reg-password" type="password" required />
+        <button type="submit">Register</button>
+      </form>
+    </section>
+
+    <div id="status" class="muted">Статус: неизвестно</div>
+    <section>
+      <h2>Логин</h2>
+      <form id="login-form">
+        <label>Username</label>
+        <input id="login-username" required />
+        <label>Password</label>
+        <input id="login-password" type="password" required />
+        <button type="submit">Login</button>
+      </form>
+    </section>
+
+    <section>
+      <h2>Новый пост</h2>
+      <form id="create-form">
+        <label>Title</label>
+        <input id="post-title" required />
+        <label>Content</label>
+        <textarea id="post-content" required></textarea>
+        <button type="submit">Create</button>
+      </form>
+    </section>
+
+    <section>
+      <h2>Посты</h2>
+      <button id="reload-posts">Reload</button>
+      <div id="posts"></div>
+    </section>
+
+    <script type="module">
+      import init, { BlogApp } from './blog-wasm/pkg/blog_wasm.js';
+
+      const statusEl = document.getElementById('status');
+      const postsEl = document.getElementById('posts');
+
+      function setStatus(app) {
+        statusEl.textContent = app.is_authenticated()
+          ? 'Статус: залогинен'
+          : 'Статус: не залогинен';
+      }
+
+      function getUserIdFromToken(token) {
+        try {
+          const payload = token.split('.')[1];
+          const b64 = payload.replace(/-/g, '+').replace(/_/g, '/');
+          const padded = b64 + '='.repeat((4 - (b64.length % 4)) % 4);
+          const json = atob(padded);
+          const data = JSON.parse(json);
+          return data.sub || null;
+        } catch (_) {
+          return null;
+        }
+      }
+
+      function renderPosts(app, posts, currentUserId) {
+        postsEl.innerHTML = '';
+        posts.forEach((p) => {
+          const el = document.createElement('div');
+          el.className = 'post';
+          el.innerHTML = `
+            <div><strong>${p.title}</strong></div>
+            <div>${p.content}</div>
+            <div class="muted">id: ${p.id ?? 'нет'}</div>
+            <div class="muted">author: ${p.author_id ?? 'нет'}</div>
+            <button class="edit">Edit</button>
+            <button class="delete">Delete</button>
+          `;
+          const canEdit = currentUserId && p.author_id && currentUserId === p.author_id;
+          if (!canEdit) {
+            el.querySelector('.edit').remove();
+            el.querySelector('.delete').remove();
+            postsEl.appendChild(el);
+            return;
+          }
+
+          el.querySelector('.edit').addEventListener('click', async () => {
+            if (!p.id) {
+              alert('Нет id у поста. Обновление невозможно.');
+              return;
+            }
+            const title = prompt('Новый заголовок', p.title);
+            const content = prompt('Новый контент', p.content);
+            if (!title || !content) return;
+            await app.update_post(p.id, title, content);
+            await loadPosts(app);
+          });
+          el.querySelector('.delete').addEventListener('click', async () => {
+            if (!p.id) {
+              alert('Нет id у поста. Удаление невозможно.');
+              return;
+            }
+            await app.delete_post(p.id);
+            await loadPosts(app);
+          });
+          postsEl.appendChild(el);
+        });
+      }
+
+      async function loadPosts(app) {
+        try {
+          const posts = await app.load_posts();
+          const token = app.get_token();
+          const userId = token ? getUserIdFromToken(token) : null;
+          renderPosts(app, posts, userId);
+        } catch (e) {
+          console.error(e);
+          postsEl.innerHTML = `<div class="muted">Ошибка загрузки постов: ${e}</div>`;
+        }
+      }
+
+      async function main() {
+        await init();
+        const app = new BlogApp();
+        setStatus(app);
+
+        document.getElementById('register-form').addEventListener('submit', async (e) => {
+          e.preventDefault();
+          const username = document.getElementById('reg-username').value.trim();
+          const email = document.getElementById('reg-email').value.trim();
+          const password = document.getElementById('reg-password').value.trim();
+          if (!username || !email || !password) return;
+          await app.register(username, email, password);
+          setStatus(app);
+          await loadPosts(app);
+        });
+
+        document.getElementById('login-form').addEventListener('submit', async (e) => {
+          e.preventDefault();
+          const username = document.getElementById('login-username').value.trim();
+          const password = document.getElementById('login-password').value.trim();
+          if (!username || !password) return;
+          await app.login(username, password);
+          setStatus(app);
+          await loadPosts(app);
+        });
+
+        document.getElementById('create-form').addEventListener('submit', async (e) => {
+          e.preventDefault();
+          const title = document.getElementById('post-title').value.trim();
+          const content = document.getElementById('post-content').value.trim();
+          if (!title || !content) return;
+          await app.create_post(title, content);
+          await loadPosts(app);
+        });
+
+        document.getElementById('reload-posts').addEventListener('click', async () => {
+          await loadPosts(app);
+        });
+
+        await loadPosts(app);
+      }
+
+      main().catch(console.error);
+    </script>
+  </body>
+</html>

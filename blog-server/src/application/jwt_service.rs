@@ -9,7 +9,6 @@ use chrono::{DateTime, Utc};
 use jsonwebtoken::signature::rand_core::OsRng;
 use password_hash::{PasswordHasher, SaltString};
 use std::sync::Arc;
-use actix_web_lab::__reexports::tracing::info;
 use uuid::Uuid;
 
 pub struct JwtService {

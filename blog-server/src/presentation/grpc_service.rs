@@ -54,10 +54,10 @@ fn map_auth_response(resp: crate::domain::jwt::AuthResponse) -> AuthResponse {
 
 fn map_post(post: ResponsePost) -> Post {
     Post {
-        id: String::new(),
+        id: post.id.0.to_string(),
         title: post.title,
         content: post.content,
-        author_id: String::new(),
+        author_id: post.author_id.0.to_string(),
         created_at: None,
         updated_at: None,
     }

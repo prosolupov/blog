@@ -5,7 +5,6 @@ use crate::domain::jwt::AuthResponse;
 use crate::domain::user::{UserAuthorization, UserResponse};
 use crate::infrastructure::password::verify_password;
 use std::sync::Arc;
-use actix_web_lab::__reexports::tracing::info;
 
 pub struct AuthService {
     user_repo: Arc<dyn UserRepository>,
